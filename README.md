@@ -1,3 +1,12 @@
+# BookMyShow Ticket Monitor
+
+This repository includes the full [Scrapling](https://github.com/D4Vinci/Scrapling)
+source and history, with a BookMyShow ticket monitor in `tools/ticket_watch`.
+See the [monitor setup and usage instructions](tools/ticket_watch/README.md).
+The monitor currently targets PVR: Forum Mall, Kochi for November 19, 2026.
+Scrapling's original documentation and BSD 3-Clause license are retained below
+and in [LICENSE](LICENSE).
+
 <!-- mcp-name: io.github.D4Vinci/Scrapling -->
 
 <h1 align="center">

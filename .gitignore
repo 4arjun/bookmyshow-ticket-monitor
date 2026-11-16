@@ -1,4 +1,5 @@
 # local files
+.ticket-watch/
 site/*
 local_tests/*
 .mcpregistry_*
