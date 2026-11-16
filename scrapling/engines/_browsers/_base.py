@@ -11,6 +11,7 @@ from patchright.sync_api import (
 )
 from patchright.async_api import Page as AsyncPage
 from patchright.async_api import (
+    Error as AsyncPlaywrightError,
     Frame as AsyncFrame,
     Response as AsyncPlaywrightResponse,
     BrowserContext as AsyncBrowserContext,
@@ -313,7 +314,11 @@ class AsyncSession:
             self.context = None
             try:
                 if self.browser:
-                    await self.browser.close()
+                    try:
+                        await self.browser.close()
+                    except AsyncPlaywrightError as error:
+                        if "Connection closed while reading from the driver" not in str(error):
+                            raise
             finally:
                 self.browser = None
                 try:
