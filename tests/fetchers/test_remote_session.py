@@ -8,7 +8,7 @@ from time import monotonic, sleep
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from patchright.async_api import async_playwright
+from patchright.async_api import Error as AsyncPlaywrightError, async_playwright
 from patchright.sync_api import sync_playwright
 
 import scrapling.fetchers as fetchers
@@ -299,6 +299,19 @@ async def test_remote_disconnects_when_owned_context_close_fails(
     browser.close.assert_called_once_with()
     driver.stop.assert_called_once_with()
     existing.close.assert_not_called()
+    assert not session._is_alive
+
+
+@pytest.mark.asyncio
+async def test_async_remote_close_ignores_disconnected_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    driver, browser, _, _, _, _ = _browser(monkeypatch, asynchronous=True)
+    browser.close.side_effect = AsyncPlaywrightError("Connection closed while reading from the driver")
+    session = AsyncRemoteSession(ENDPOINT)
+    await _resolve(session.start())
+
+    await session.close()
+
+    driver.stop.assert_called_once_with()
     assert not session._is_alive
 
 
