@@ -56,3 +56,9 @@ after Telegram resolves every number. If a lookup fails, check that the account
 is reachable by phone from your Telegram contacts. Updated monitors read the
 list for each new alert. Restart monitors launched before this feature once to
 enable delivery to multiple recipients.
+
+### License
+
+This project is licensed under the [BSD 3-Clause License](LICENSE).
+The monitor is built with [Scrapling](https://github.com/D4Vinci/Scrapling),
+a BSD-3-Clause project by Karim shoair.
