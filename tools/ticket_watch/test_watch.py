@@ -6,11 +6,11 @@ import tempfile
 from pathlib import Path
 
 from scrapling import Selector
-from watch import inspect_page, repeat_alert, notify
+from watch import inspect_page, claim_new_shows, notify, fetch_shows, DateNotListed
 
 
-def document(rows='', footer='', date='20261119'):
-    return Selector(f'''<html><head><title>Bachelor Party D'eux Movie Showtimes</title></head>
+def document(rows='', footer='', date='20261217'):
+    return Selector(f'''<html><head><title>Avengers: Doomsday Movie Showtimes</title></head>
     <body><div id="main-content"><div id="{date}"></div><div role="grid">
     {rows}</div></div><footer>{footer}</footer></body></html>''')
 
@@ -23,8 +23,20 @@ BUTTON = '<div role="button" tabindex="0" aria-label="10:00 AM, 4K ATMOS">10:00 
 
 
 class DetectionTests(unittest.TestCase):
+    def test_requested_date_not_yet_listed(self):
+        response = document(venue('PVMF', BUTTON), date='20261119')
+        response.status = 200
+        response.url = 'https://in.bookmyshow.com/movies/kochi/avengers-doomsday/buytickets/ET00526287/20261119'
+        with patch('watch.StealthyFetcher.fetch', return_value=response):
+            with self.assertRaises(DateNotListed):
+                fetch_shows()
+
+    def test_explicit_empty_showtime_page(self):
+        page = document('There are no shows available for this date for the selected language format.')
+        self.assertEqual(inspect_page(page), [])
+
     def test_dated_venue_booking_link(self):
-        page = document(venue('buytickets/PVMF/20261119', BUTTON))
+        page = document(venue('buytickets/PVMF/20261217', BUTTON))
         self.assertEqual(inspect_page(page), ['10:00 AM, 4K ATMOS'])
 
     def test_footer_does_not_trigger(self):
@@ -57,23 +69,16 @@ class DetectionTests(unittest.TestCase):
 
 
 class AlertTests(unittest.TestCase):
-    def test_alert_repeats_until_stop(self):
-        args = SimpleNamespace(command='run', alert_interval=15, alert_volume=2.0)
-        with patch('watch.STOP') as stop, patch('watch.notify') as alert:
-            stop.is_set.return_value = False
-            stop.wait.side_effect = [False, True]
-            repeat_alert('Tickets detected', args)
-            self.assertEqual(alert.call_count, 2)
-            alert.assert_called_with('Tickets detected', volume=2.0, bursts=3)
-            stop.wait.assert_called_with(15)
+    def setUp(self):
+        telegram = patch('watch.TelegramDelivery')
+        telegram.start()
+        self.addCleanup(telegram.stop)
 
-    def test_once_does_not_repeat(self):
-        args = SimpleNamespace(command='once', alert_interval=15, alert_volume=2.0)
-        with patch('watch.STOP') as stop, patch('watch.notify') as alert:
-            stop.is_set.return_value = False
-            repeat_alert('Tickets detected', args)
-            alert.assert_called_once()
-            stop.wait.assert_not_called()
+    def test_seen_times_are_shared_between_providers_and_checks(self):
+        with tempfile.TemporaryDirectory() as directory, patch('watch.CONFIG', Path(directory)):
+            self.assertEqual(claim_new_shows(['12:05 AM, PXL']), ['12:05 AM, PXL'])
+            self.assertEqual(claim_new_shows(['12:05 AM MS INFINITY VISION 3D', '1:35 PM']), ['1:35 PM'])
+            self.assertEqual(claim_new_shows(['01:35 PM, PXL']), [])
 
     def test_audio_still_plays_if_banner_fails(self):
         with tempfile.TemporaryDirectory() as directory, patch('watch.STATE', Path(directory)), \
